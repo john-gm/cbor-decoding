@@ -19,6 +19,15 @@ def open_cbor(filename):
     image_data = obj[1].value[1].value
     return dimensions, image_data
 
+
+def image_values(element):
+    return int.from_bytes(element, byteorder='big', signed=False)
+
+
+def metadata_values(element):
+    return int.from_bytes(element, byteorder='big', signed=True)
+
+
 def decode_image_bytes(image_byte_array):
     """Input: 1-D list of 16 bit two's compliment bytes 
         Operations: Converts the bytes to unsigned and decodes them
@@ -28,11 +37,10 @@ def decode_image_bytes(image_byte_array):
     image = np.array(image_byte_array, dtype='uint8')
     # Split the unsigned bytes into segments
     bytes_array=np.array_split(image,(len(image)/2))
-    holder = list()
     # Convert segements into integer values
-    for x in bytes_array:
-        holder.append(int.from_bytes(list(x), byteorder='big', signed=False))
-    return holder
+    bytes_array = np.apply_along_axis(image_values, 1, bytes_array)
+    return bytes_array
+
 
 def decode_image_metadata(image_dimensions_bytes_array):
     """Input: 1-D list of sint64 two's complement bytes
@@ -44,8 +52,7 @@ def decode_image_metadata(image_dimensions_bytes_array):
     # Split the unsigned bytes into segements
     bytes_array=np.array_split(dimensions,(len(dimensions)/8))
     # Convert the segments into integer values
-    for x in range(0, len(bytes_array)):
-        bytes_array[x]=int.from_bytes(list(bytes_array[x]), byteorder='big', signed=True)
+    bytes_array = np.apply_along_axis(metadata_values, 1, bytes_array)
     # Put the converted integer values into a dictionary
     end = dict(itertools.zip_longest(['width', 'height', 'channels', 'Z', 'time'], bytes_array, fillvalue=None))
     return end
